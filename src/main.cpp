@@ -11,7 +11,7 @@
 
 /* Daten, die angepasst werden müssen */
 const bool testI2C = true;      // Testmodus für I2C-Kommunikation
-const uint8_t slaveAddress = 9; // I2C-Adresse des Slaves
+const uint8_t slaveAddress = BoardFuerAlles; // I2C-Adresse des Slaves
 const uint8_t msgSize = 2;      // Größe der Bestätigungsnachricht, muss mit Master abgestimmt sein
 // Erste Stelle: Antwortwert, Zweite Stelle: Index des leeren Magazins
 
