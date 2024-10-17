@@ -18,14 +18,14 @@ Magazin::Magazin(int solPins[3], int senPins[3], unsigned long activateDuration,
 }
 
 // Interne Logik zur Steuerung der Solenoids und zum Auslesen der Sensoren
-int Magazin::activateControl(int index)
+ModuleState Magazin::activateControl(int index)
 {
     if (!_isActivated) // Wenn der Solenoid noch nicht aktiviert ist
     {
         digitalWrite(_pairs[index].solenoidPin, HIGH); // Solenoid einschalten
         _timer = millis();                             // Timer zurücksetzen
         _isActivated = true;                           // Aktivierungsstatus setzen
-        return 0;                                      // Noch nicht fertig, Zeit läuft
+        return RunningState;                                      // Noch nicht fertig, Zeit läuft
     }
 
     // Solenoid ist aktiviert, Zeit prüfen
@@ -46,21 +46,21 @@ int Magazin::activateControl(int index)
         // Wenn der Sensorwert erkannt wurde, Rückgabewert 2
         if (sensorValue == HIGH)
         {
-            return 2; // Sensorwert erkannt
+            return ErrorState; // Sensorwert erkannt
         }
-        return 1; // Vorgang abgeschlossen, aber Sensor nicht ausgelöst
+        return CompletedState; // Vorgang abgeschlossen, aber Sensor nicht ausgelöst
     }
 
-    return 0; // Vorgang läuft noch
+    return RunningState; // Vorgang läuft noch
 }
 
 // Verarbeitung der Eingabe, ruft activateControl basierend auf inputValue auf
-int Magazin::parseInput(int inputValue)
+ModuleState Magazin::parseInput(int inputValue)
 {
     int motorIndex = inputValue - 1; // Index des Solenoids (0-2)
     if (motorIndex >= 0 && motorIndex < 3)
     {
         return activateControl(motorIndex); // Rufe activateControl mit dem entsprechenden Index auf
     }
-    return -1; // Ungültige Eingabe
+    return InvalidState; // Ungültige Eingabe
 }

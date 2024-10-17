@@ -10,26 +10,27 @@
 #include "MyEnums.h" // Enumerationsdatei einbinden
 
 /* Daten, die angepasst werden müssen */
-const bool testI2C = true;      // Testmodus für I2C-Kommunikation
+const bool testI2C = false;                  // Testmodus für I2C-Kommunikation
 const uint8_t slaveAddress = BoardFuerAlles; // I2C-Adresse des Slaves
-const uint8_t msgSize = 2;      // Größe der Bestätigungsnachricht, muss mit Master abgestimmt sein
+const uint8_t msgSize = 2;                   // Größe der Bestätigungsnachricht, muss mit Master abgestimmt sein
 // Erste Stelle: Antwortwert, Zweite Stelle: Index des leeren Magazins
+
+int testValue = 0; // Testwert für die Aktoren
 
 // Kontrollklasse für Aktoren
 BaseActuator *modules[NumberOfModules]; // Array von Aktoren
 
 /* Daten, die nicht angepasst werden müssen */
-int8_t requestValues[NumberOfModules];     // Werte, die vom Master an die Slaves ausgegeben werden
+int16_t requestValues[NumberOfModules];    // Werte, die vom Master an die Slaves ausgegeben werden
 ModuleState moduleStates[NumberOfModules]; // Werte, die von den Slaves an den Master zurückgegeben werden
 const uint8_t buffSize = 4;                // Größe des Buffers für empfangene Daten
 char buff[buffSize] = {0};                 // Buffer für empfangene Daten, initialisiert mit 0
-char msg[msgSize] = {0};                   // Bestätigungsnachricht
+char msg[msgSize + 1] = {0};               // Bestätigungsnachricht
 Response response = Completed;             // Antwortwert
 int8_t emptyMagazine = 0;                  // Index des leeren Magazins
-uint8_t index = 0;                         // Index für den Buffer
 uint16_t readValue = 0;                    // Gelesener Wert
 
-void receiveInputFromMaster(); // Funktion zum Empfangen der Eingabe
+void receiveFromMaster(int numBytes); // Funktion zum Empfangen der Eingabe
 
 void parseInput(); // Funktion zum Verarbeiten der Eingabe
 
@@ -43,17 +44,29 @@ void charArray2IntArray(const char *charArray, int8_t *output); // Funktion zum 
 
 void char2Int(char *charArray, uint16_t &output); // Funktion zum Konvertieren von Char-Array in Integer
 
+void testFunc(); // Funktion zum Testen der Aktoren
+
+uint16_t mapADC(float x, float in_min, float in_max, uint16_t out_min, uint16_t out_max); // Funktion zum Umwandeln des ADC-Werts in einen Dezimalwert
+
 // Setup-Funktion für Initialisierungen
 void setup()
 {
   // Baudrate für die serielle Kommunikation auf 9600 setzen
   Serial.begin(9600);
 
-  // Meldung ausgeben, dass der I2C-Slave initialisiert ist
-  Serial.println(F("I2C-Slave initialisiert"));
-
   // I2C-Adresse des Slaves setzen
   Wire.begin(slaveAddress);
+
+  // Funktion für den Empfang von Daten vom Master setzen
+  Wire.onReceive(receiveFromMaster);
+
+  // Funktion für die Antwort an den Master setzen
+  Wire.onRequest(respondToMaster);
+
+  // Meldung ausgeben, dass der I2C-Slave initialisiert ist
+  Serial.println(F("I2C-Slave initialisiert"));
+  Serial.print(F("I2C-Adresse: "));
+  Serial.println(slaveAddress);
 
   /* Initialisieren der Aktoren*/
   // Magazin Daten
@@ -65,30 +78,28 @@ void setup()
   modules[MagazinModule] = new Magazin(solenoidPins, sensorPins, timeOn, timeOff); // Magazin (Solenoid-Pins, Sensor-Pins, Aktivierungs- und Deaktivierungsdauer)
 
   // Schieber Daten
-  int posPin = 5;  // Positiver Pin für den Schieber
-  int negPin = 4;  // Negativer Pin für den Schieber
-  int adcPin = 15; // ADC-Pin für den Schieber
-  int tol = 5;     // Toleranz für den Schieber
-  int posA = 30;   // Position A für den Schieber
-  int posB = 500;  // Position B für den Schieber
+  int posPin = 5;                        // Positiver Pin für den Schieber
+  int negPin = 4;                        // Negativer Pin für den Schieber
+  int adcPin = 15;                       // ADC-Pin für den Schieber
+  int tol = 5;                           // Toleranz für den Schieber
+  int positionenSchieber[2] = {30, 500}; // Positionen für Schieber
 
-  modules[SchieberModule] = new Schieber(posPin, negPin, adcPin, tol, posA, posB); // Schieber (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz, Position A, Position B)
+  modules[SchieberModule] = new Schieber(posPin, negPin, adcPin, tol, positionenSchieber); // Schieber (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz, Position A, Position B)
 
   // Schere Daten
-  posPin = 7;        // Positiver Pin für die Schere
-  negPin = 6;        // Negativer Pin für die Schere
-  adcPin = 14;       // ADC-Pin für die Schere
-  tol = 5;           // Toleranz für die Schere
-  int posOpen = 500; // Position für das Öffnen der Schere
-  int posClose = 30; // Position für das Schließen der Schere
+  posPin = 7;                          // Positiver Pin für die Schere
+  negPin = 6;                          // Negativer Pin für die Schere
+  adcPin = 14;                         // ADC-Pin für die Schere
+  tol = 5;                             // Toleranz für die Schere
+  int positionenSchere[2] = {30, 500}; // Positionen für Schere
 
-  modules[SchereModule] = new Schere(posPin, negPin, adcPin, tol, posOpen, posClose); // Schere (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz, Position für das Öffnen, Position für das Schließen)
+  modules[SchereModule] = new Schere(posPin, negPin, adcPin, tol, positionenSchere); // Schere (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz, Position für das Öffnen, Position für das Schließen)
 
   // Anschlag Daten
   posPin = 2;  // Positiver Pin für den Anschlag
-  negPin = 1;  // Negativer Pin für den Anschlag
+  negPin = 17; // Negativer Pin für den Anschlag, 17 == A3
   adcPin = 16; // ADC-Pin für den Anschlag
-  tol = 1;     // Toleranz für den Anschlag
+  tol = 3;    // Toleranz für den Anschlag
 
   modules[AnschlagModule] = new Anschlag(posPin, negPin, adcPin, tol); // Anschlag (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz)
 
@@ -110,50 +121,58 @@ void setup()
 // Hauptprogramm
 void loop()
 {
-  receiveInputFromMaster(); // Eingabe vom Master empfangen
-
-  parseInput(); // Eingabe verarbeiten
-
+  // testFunc();     // Testfunktion
   getResponses(); // Überprüfen der Antworten
 
-  respondToMaster(); // Antwort an den Master senden
+  delay(100);
 }
 
-void receiveInputFromMaster()
+void receiveFromMaster(int numBytes)
 {
-  // Empfangsstatus des Slaves abfragen
-  Wire.requestFrom(slaveAddress, msgSize); // Anfragen an den Master senden, um Daten zu lesen
-
-  while (Wire.available() && index < buffSize) // Solange Daten verfügbar sind und der Index innerhalb des Buffers liegt
-  {
-    // Gelesenen Wert speichern
-    char incomingData = Wire.read();
-    Serial.print(F("Empfangen: "));
-    Serial.println(incomingData);
-
-    // Die empfangene Daten in das char-Array speichern
-    buff[index++] = incomingData;
+  int index = 0; // Index zum Speichern der Daten im Buffer
+  while (Wire.available() && index < buffSize)
+  {                                  // Solange Daten verfügbar sind und Buffer nicht voll ist
+    char incomingData = Wire.read(); // Gelesenen Wert speichern
+    // Serial.print(F("Empfangen: "));
+    // Serial.println(incomingData);
+    buff[index++] = incomingData; // Speichere den empfangenen Wert im Buffer
   }
-  index = 0; // Index zurücksetzen
+  buff[index] = '\0'; // Nullterminierung
+
+  // Serial.println(F("Empfangen abgeschlossen"));
+  // Serial.print(F("Empfangene Daten: "));
+  // Serial.println(buff);
+
+  parseInput(); // Empfangene Daten verarbeiten
 }
 
 void parseInput()
 {
   // Konvertiere die empfangenen Daten in einen Integer-Wert
-  readValue = 0; // Vom Master gelesener Wert
+  readValue = 0; // Vom Master gelesener Wert als Integer
   char2Int(buff, readValue);
   buff[0] = '\0'; // Buffer zurücksetzen
 
   // Abhängig vom empfangenen Status reagieren
   // --> zB input = 10 --> currentModule = 1, requestValues[1] = 0;
   // --> zB input = 5200 --> currentModule = 5, requestValues[5] = 200;
-  for (uint16_t i = 10; i < 10000; i *= 10)
+  for (uint16_t i = 10; i < 10000; i *= 10) // Schleife durch die Zehnerpotenzen
   {
-    if (readValue < i) // Werte werden in ein Array gespeichert, um zwischen den Aufträgen zu unterscheiden
+    if (readValue < i * 10) // Wenn der Wert kleiner als die nächste Zehnerpotenz ist
     {
       Module currentModule = static_cast<Module>(readValue / i); // Aktueller Funktionsblock
       requestValues[currentModule] = readValue % i;              // Wert für den Funktionsblock speichern
       moduleStates[currentModule] = RunningState;                // Status auf "Running" setzen
+      response = Running;                                        // Antwortwert auf "Running" setzen
+
+      // Serial.print(F("Index: "));
+      // Serial.println(i);
+      // Serial.print(F("Funktionsblock: "));
+      // Serial.println(currentModule);
+      // Serial.print(F("Wert: "));
+      // Serial.println(requestValues[currentModule]);
+
+      break;
     }
   }
 }
@@ -162,39 +181,25 @@ void respondToMaster()
 {
   // Antwort an den Master vorbereiten
   int responseValue = 10 * response + emptyMagazine; // Antwortwert vorbereiten
-  int2Char(responseValue, msg);
-  Serial.print(F("Antwort wird gesendet: "));
-  Serial.println(msg);
+  int2Char(responseValue, msg);                      // Antwortwert in ein char-Array konvertieren
+  msg[msgSize] = '\0';                               // Nullterminierung
+  Serial.print(F("Antwort wird gesendet: "));        // Meldung ausgeben
+  Serial.println(msg);                               // Antwort ausgeben
 
-  Wire.beginTransmission(slaveAddress);   // Übertragung an den Master beginnen
-  Wire.write(msg, msgSize);               // Antwort an den Master senden
-  uint8_t error = Wire.endTransmission(); // Übertragung beenden
-  Serial.println(F("Antwort gesendet"));
-
-  if (error == 0)
-  {
-    if (response == Completed) // Wenn alle Befehle abgeschlossen sind
-    {
-      for (uint8_t i = 0; i < NumberOfModules; i++) // Alle Module rücksetzen
-      {
-        moduleStates[i] = CompletedState;
-        requestValues[i] = -1;
-      }
-    }
-    Serial.println(F("Übertragung erfolgreich"));
-  }
-  else
-  {
-    Serial.println(F("Übertragung fehlgeschlagen"));
-  }
+  Wire.write(msg, msgSize); // Antwort an den Master senden
+  // Serial.println(F("Antwort gesendet")); // Meldung ausgeben
 }
 
 // Überprüft die Antworten
 void getResponses()
 {
+  // Serial.println(F("Antworten werden überprüft")); // Meldung ausgeben
+  // Serial.print(F("Antwortwert: "));                // Meldung ausgeben
+  // Serial.println(response);                        // Antwortwert ausgeben
+
   if (response == Running) // Wenn noch nicht alle Befehle fertig verarbeitet wurden
   {
-    response = Completed; // Antwortwert auf 1 setzen
+    Response tempResponse = Completed; // Antwortwert auf 1 setzen
     /* Abarbeiten der empfangenen Befehle*/
     for (uint8_t responder = 0; responder < NumberOfModules; responder++) // Für jeden Funktionsblock
     {
@@ -208,7 +213,12 @@ void getResponses()
           }
           else // Wenn der Testmodus nicht aktiviert ist
           {
-            moduleStates[responder] = static_cast<ModuleState>(modules[responder]->parseInput(requestValues[responder])); // Funktion ausführen
+            // Serial.print("Funktionsblock: ");
+            // Serial.println(responder);
+            // Serial.print("Wert: ");
+            // Serial.println(requestValues[responder]);
+
+            moduleStates[responder] = modules[responder]->parseInput(requestValues[responder]); // Funktion ausführen
 
             if (responder == MagazinModule) // Magazin Füllstand kontrollieren                                                                               // Wenn ein Fehler aufgetreten ist
             {
@@ -228,11 +238,12 @@ void getResponses()
           }
           else // Wenn der Vorgang noch nicht abgeschlossen ist
           {
-            response = Running; // Antwortwert auf 0 setzen
+            tempResponse = Running; // Antwortwert auf 0 setzen
           }
         }
       }
     }
+    response = tempResponse; // Antwortwert setzen
   }
 }
 
@@ -280,3 +291,10 @@ void char2Int(char *charArray, uint16_t &output) // Konvertiert ein mehrstellige
     }
   }
 }
+
+// // Methode zur Umwandlung des ADC-Werts in einen Dezimalwert
+// uint16_t mapADC(float x, float in_min, float in_max, uint16_t out_min, uint16_t out_max)
+// {
+//   // Standard-Arduino-Mapping-Funktion zur Umwandlung des ADC-Werts
+//   return static_cast<uint16_t>((x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min);
+// }

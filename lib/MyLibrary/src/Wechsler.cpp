@@ -29,7 +29,7 @@ Wechsler::Wechsler(int pwmPin, float rotationTimePerDegree, float dutyCyclePWM)
  * @return int: Returns 0 if the motor is still rotating,
  *              and 1 when the motor has finished its rotation.
  */
-int Wechsler::parseInput(int inputValue)
+ModuleState Wechsler::parseInput(int inputValue)
 {
     // If inputValue is 1, start the motor rotation
     if (inputValue == 1)
@@ -38,7 +38,7 @@ int Wechsler::parseInput(int inputValue)
         return rotateDegrees(72); // Call rotateDegrees and return its result
     }
 
-    return 1; // Return 1 if no rotation is initiated (inputValue is not 1)
+    return CompletedState; // Return 1 if no rotation is initiated (inputValue is not 1)
 }
 
 /**
@@ -48,7 +48,7 @@ int Wechsler::parseInput(int inputValue)
  * @return uint8_t: Returns 0 if the motor is still rotating,
  *                  and 1 when the motor has finished its rotation.
  */
-int Wechsler::rotateDegrees(int degrees)
+ModuleState Wechsler::rotateDegrees(int degrees)
 {
     // If the motor is not currently running, initiate rotation
     if (!_motorRunning)
@@ -82,13 +82,13 @@ int Wechsler::rotateDegrees(int degrees)
             // Mark the motor as stopped
             _motorRunning = false;
 
-            return 1; // Motor rotation is complete, return 1
+            return CompletedState; // Motor rotation is complete, return CompletedState
         }
         else
         {
-            return 0; // Motor is still rotating, return 0
+            return RunningState; // Motor is still rotating, return RunningState
         }
     }
 
-    return 1; // If no rotation was initiated or if the motor has stopped, return 1
+    return CompletedState; // If no rotation was initiated or if the motor has stopped, return CompletedState
 }

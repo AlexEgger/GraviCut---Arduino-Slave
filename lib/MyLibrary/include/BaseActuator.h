@@ -2,6 +2,7 @@
 #define BASEACTUATOR_H
 
 #include <Arduino.h>
+#include "myEnums.h"
 
 // Basisklasse Actuator
 class BaseActuator
@@ -12,7 +13,7 @@ public:
 
     // Virtuelle Methode parseInput() zur Verarbeitung von Eingabewerten
     // Diese Methode muss in abgeleiteten Klassen überschrieben werden
-    virtual int parseInput(int inputValue) = 0;
+    virtual ModuleState parseInput(int inputValue) = 0;
 };
 
 #endif // BASEACTUATOR_H

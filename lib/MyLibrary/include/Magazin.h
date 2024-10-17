@@ -28,14 +28,14 @@ private:
     bool _isActivated;                 // Flag, ob der Solenoid aktiviert wurde
 
     // Interne Logik für das Ansteuern und das Auslesen des Sensors
-    int activateControl(int index);
+    ModuleState activateControl(int index);
 
 public:
     // Konstruktor: Initialisiert die Solenoids, Sensoren und Zeiten
     Magazin(int solPins[3], int senPins[3], unsigned long activateDuration, unsigned long deactivateDuration);
 
     // Überschreiben der Methode parseInput aus der Basisklasse
-    int parseInput(int inputValue) override;
+    ModuleState parseInput(int inputValue) override;
 };
 
 #endif // MAGAZIN_H

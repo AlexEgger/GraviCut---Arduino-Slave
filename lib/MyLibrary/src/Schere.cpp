@@ -1,59 +1,22 @@
 #include "Schere.h"
 
 // Constructor
-Schere::Schere(int posPin, int negPin, int adcPin, int tol, int posOpen, int posClosed)
-    : BasePosServo(posPin, negPin, adcPin, tol), // Calling the base class constructor
-      _posOpen(posOpen), // Initialize Open position
-      _posClosed(posClosed) // Initialize Closed position
+Schere::Schere(int posPin, int negPin, int adcPin, int tol, const int positions[2])
+    : BasePosServo(posPin, negPin, adcPin, tol, positions) // Calling the base class constructor
 {
     // No additional initialization needed
 }
 
 // Overriding the parseInput method to control the actuator
-int Schere::parseInput(int inputValue)
+ModuleState Schere::parseInput(int inputValue)
 {
-    if (inputValue == 0) // Close command
+    if (inputValue == 0) // Move to Position A
     {
-        return Close();
+        return positionMaximum(_storedPositions[0]);
     }
-    else if (inputValue == 1) // Open command
+    else if (inputValue == 1) // Move to Position B
     {
-        return Open();
+        return positionMinimum(_storedPositions[1]);
     }
-    return -1; // Invalid input
-}
-
-// Private methods to control the actuator
-int Schere::Open()
-{
-    updatePosition();
-    if (_position < _posOpen) // Compare with the defined open position
-    {
-        digitalWrite(_negPin, LOW);
-        digitalWrite(_posPin, HIGH);
-        return 0; // Still running
-    }
-    else
-    {
-        digitalWrite(_posPin, LOW);
-        digitalWrite(_negPin, LOW);
-        return 1; // Operation completed
-    }
-}
-
-int Schere::Close()
-{
-    updatePosition();
-    if (_position > _posClosed) // Compare with the defined closed position
-    {
-        digitalWrite(_posPin, LOW);
-        digitalWrite(_negPin, HIGH);
-        return 0; // Still running
-    }
-    else
-    {
-        digitalWrite(_posPin, LOW);
-        digitalWrite(_negPin, LOW);
-        return 1; // Operation completed
-    }
+    return InvalidState; // Invalid input
 }

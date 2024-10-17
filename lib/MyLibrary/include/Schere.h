@@ -6,23 +6,11 @@
 
 class Schere : public BasePosServo
 {
-private:
-    // Position for Open state
-    int _posOpen;
-
-    // Position for Closed state
-    int _posClosed;
-
-    // Private methods to control the actuator
-    int Open();
-    int Close();
-
 public:
-    // Constructor
-    Schere(int posPin, int negPin, int adcPin, int tol, int posOpen, int posClosed); // posOpen > posClosed
-
+    // Constructor for the Schere class
+    Schere(int posPin, int negPin, int adcPin, int tol, const int positions[2]);
     // Overriding the parseInput method to control the actuator
-    int parseInput(int inputValue) override;
+    ModuleState parseInput(int inputValue) override;
 };
 
 #endif // SCHERE_H

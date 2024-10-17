@@ -17,14 +17,14 @@ private:
     int _pwmPin;              // PWM-Pin für die Motorsteuerung
 
     // Initiates the rotation of the motor by a specified number of degrees
-    int rotateDegrees(int degrees);
+    ModuleState rotateDegrees(int degrees);
 
 public:
     // Konstruktor
     Wechsler(int pwmPin, float rotationTimePerDegree, float dutyCyclePWM);
 
     // Überschreiben der parseInput-Methode zur Steuerung des Aktuators
-    int parseInput(int inputValue) override;
+    ModuleState parseInput(int inputValue) override;
 };
 
 #endif // WECHSLER_H
