@@ -8,7 +8,7 @@ class Schere : public BasePosServo
 {
 public:
     // Constructor for the Schere class
-    Schere(int posPin, int negPin, int adcPin, int tol, const int positions[2]);
+    Schere(int posPin, int negPin, int adcPin, uint16_t tol, const int positions[2], uint16_t _closedLoopTol = 0, bool inverseMapping = false);
     // Overriding the parseInput method to control the actuator
     ModuleState parseInput(int inputValue) override;
 };

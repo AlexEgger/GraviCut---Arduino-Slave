@@ -20,7 +20,9 @@ protected:
     int _position;                    // Current position in 1/100 cm
     int _adcValue;                    // Current ADC value
     int _storedPositions[2];          // Fixed positions the motor should move to (optional)
-    const int _tol;                   // Tolerance in 1/100 cm
+    bool _inverseMapping;             // Invert the mapping of the ADC value
+    const uint16_t _tol;              // Tolerance in 1/100 cm
+    const uint16_t _closedLoopTol;    // Tolerance for closed loop control
     motorDirection _currentDirection; // Direction the motor is moving in
 
     // Convert from ADC value to a decimal value
@@ -33,6 +35,9 @@ protected:
     virtual void goDirection(motorDirection direction);
 
     // Move actuator to a specific position
+    virtual ModuleState positionTargetWithTol(int targetPosition);
+
+    // Move actuator to a specific position
     virtual ModuleState positionTarget(int targetPosition);
 
     // Move actuator to at least targetPosition
@@ -43,10 +48,13 @@ protected:
 
 public:
     // Standard-Konstruktor
-    BasePosServo(int posPin, int negPin, int adcPin, int tol);
+    BasePosServo(int posPin, int negPin, int adcPin, uint16_t tol, uint16_t closedLoopTol = 0, bool inverseMapping = false);
 
     // Überladener Konstruktor mit zusätzlichem Positionsarray
-    BasePosServo(int posPin, int negPin, int adcPin, int tol, const int positions[2]);
+    BasePosServo(int posPin, int negPin, int adcPin, uint16_t tol, const int positions[2], uint16_t closedLoopTol = 0, bool inverseMapping = false);
+
+    // Ausgeben der aktuellen Position
+    int getPosition();
 };
 
 #endif // BASEPOSSERVO_H

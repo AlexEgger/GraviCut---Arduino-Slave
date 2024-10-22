@@ -44,8 +44,6 @@ void charArray2IntArray(const char *charArray, int8_t *output); // Funktion zum 
 
 void char2Int(char *charArray, uint16_t &output); // Funktion zum Konvertieren von Char-Array in Integer
 
-void testFunc(); // Funktion zum Testen der Aktoren
-
 uint16_t mapADC(float x, float in_min, float in_max, uint16_t out_min, uint16_t out_max); // Funktion zum Umwandeln des ADC-Werts in einen Dezimalwert
 
 // Setup-Funktion für Initialisierungen
@@ -64,9 +62,9 @@ void setup()
   Wire.onRequest(respondToMaster);
 
   // Meldung ausgeben, dass der I2C-Slave initialisiert ist
-  Serial.println(F("I2C-Slave initialisiert"));
-  Serial.print(F("I2C-Adresse: "));
-  Serial.println(slaveAddress);
+  // Serial.println(F("I2C-Slave initialisiert"));
+  // Serial.print(F("I2C-Adresse: "));
+  // Serial.println(slaveAddress);
 
   /* Initialisieren der Aktoren*/
   // Magazin Daten
@@ -81,34 +79,38 @@ void setup()
   int posPin = 5;                        // Positiver Pin für den Schieber
   int negPin = 4;                        // Negativer Pin für den Schieber
   int adcPin = 15;                       // ADC-Pin für den Schieber
-  int tol = 5;                           // Toleranz für den Schieber
-  int positionenSchieber[2] = {30, 500}; // Positionen für Schieber
+  int tol = 1;                           // Toleranz für den Schieber
+  int closedLoopTol = 0;                 // Toleranz in 1/100 cm ab der der Motor in einer Schleife regelt
+  int positionenSchieber[2] = {10, 510}; // Positionen für Schieber
 
-  modules[SchieberModule] = new Schieber(posPin, negPin, adcPin, tol, positionenSchieber); // Schieber (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz, Position A, Position B)
+  modules[SchieberModule] = new Schieber(posPin, negPin, adcPin, tol, positionenSchieber, closedLoopTol); // Schieber (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz, Position A, Position B)
 
   // Schere Daten
   posPin = 7;                          // Positiver Pin für die Schere
   negPin = 6;                          // Negativer Pin für die Schere
   adcPin = 14;                         // ADC-Pin für die Schere
   tol = 5;                             // Toleranz für die Schere
-  int positionenSchere[2] = {30, 500}; // Positionen für Schere
+  closedLoopTol = 0;                   // Toleranz in 1/100 cm ab der der Motor in einer Schleife regelt
+  int positionenSchere[2] = {80, 500}; // Positionen für Schere
 
-  modules[SchereModule] = new Schere(posPin, negPin, adcPin, tol, positionenSchere); // Schere (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz, Position für das Öffnen, Position für das Schließen)
+  modules[SchereModule] = new Schere(posPin, negPin, adcPin, tol, positionenSchere, closedLoopTol); // Schere (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz, Position für das Öffnen, Position für das Schließen)
 
   // Anschlag Daten
-  posPin = 2;  // Positiver Pin für den Anschlag
-  negPin = 17; // Negativer Pin für den Anschlag, 17 == A3
-  adcPin = 16; // ADC-Pin für den Anschlag
-  tol = 3;    // Toleranz für den Anschlag
+  posPin = 2;                           // Positiver Pin für den Anschlag
+  negPin = 17;                          // Negativer Pin für den Anschlag, 17 == A3
+  adcPin = 16;                          // ADC-Pin für den Anschlag
+  tol = 1;                              // Toleranz für den Anschlag
+  closedLoopTol = 15;                   // Toleranz in 1/100 cm ab der der Motor in einer Schleife regelt
+  int positionenAnschlag[2] = {300, 300}; // Positionen für Schere
+  bool inverseMapping = true;           // Invertiertes Mapping für den Anschlag
 
-  modules[AnschlagModule] = new Anschlag(posPin, negPin, adcPin, tol); // Anschlag (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz)
+  modules[AnschlagModule] = new Anschlag(posPin, negPin, adcPin, tol, positionenAnschlag, closedLoopTol, inverseMapping); // Anschlag (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz)
 
   // Wechsler Daten
   int pwmPin = 3;                       // PWM-Pin für den Wechsler
-  float rotationTimePerDegree = 0.0035; // Drehzeit pro Grad für den Wechsler
-  float dutyCyclePWM = 0.75f;           // PWM-Duty-Cycle für den Wechsler
+  float rotationTimePerDegree = 0.003; // Drehzeit pro Grad für den Wechsler
 
-  modules[WechslerModule] = new Wechsler(pwmPin, rotationTimePerDegree, dutyCyclePWM); // Wechsler (PWM-Pin, Drehzeit pro Grad, PWM-Duty-Cycle)
+  modules[WechslerModule] = new Wechsler(pwmPin, rotationTimePerDegree); // Wechsler (PWM-Pin, Drehzeit pro Grad, PWM-Duty-Cycle)
 
   // Standard Status für die Module setzen
   for (uint8_t i = 0; i < NumberOfModules; i++)
@@ -121,10 +123,7 @@ void setup()
 // Hauptprogramm
 void loop()
 {
-  // testFunc();     // Testfunktion
   getResponses(); // Überprüfen der Antworten
-
-  delay(100);
 }
 
 void receiveFromMaster(int numBytes)
@@ -183,8 +182,8 @@ void respondToMaster()
   int responseValue = 10 * response + emptyMagazine; // Antwortwert vorbereiten
   int2Char(responseValue, msg);                      // Antwortwert in ein char-Array konvertieren
   msg[msgSize] = '\0';                               // Nullterminierung
-  Serial.print(F("Antwort wird gesendet: "));        // Meldung ausgeben
-  Serial.println(msg);                               // Antwort ausgeben
+                                                     // Serial.print(F("Antwort wird gesendet: "));        // Meldung ausgeben
+  // Serial.println(msg);                               // Antwort ausgeben
 
   Wire.write(msg, msgSize); // Antwort an den Master senden
   // Serial.println(F("Antwort gesendet")); // Meldung ausgeben
@@ -213,12 +212,22 @@ void getResponses()
           }
           else // Wenn der Testmodus nicht aktiviert ist
           {
-            // Serial.print("Funktionsblock: ");
-            // Serial.println(responder);
-            // Serial.print("Wert: ");
-            // Serial.println(requestValues[responder]);
-
-            moduleStates[responder] = modules[responder]->parseInput(requestValues[responder]); // Funktion ausführen
+            if (responder == SchieberModule) // Anschlag Position kontrollieren wenn Schieber verfährt
+            {
+              Anschlag *currentAnschlag = static_cast<Anschlag *>(modules[AnschlagModule]); // Anschlag initialisieren
+              if (currentAnschlag->getPosition() > 300)
+              {
+                moduleStates[responder] = modules[responder]->parseInput(requestValues[responder]); // Funktion ausführen
+              }
+              else
+              {
+                currentAnschlag->parseInput(1); // Anschlag auf Position A fahren
+              }
+            }
+            else
+            {
+              moduleStates[responder] = modules[responder]->parseInput(requestValues[responder]); // Funktion ausführen
+            }
 
             if (responder == MagazinModule) // Magazin Füllstand kontrollieren                                                                               // Wenn ein Fehler aufgetreten ist
             {
@@ -291,10 +300,3 @@ void char2Int(char *charArray, uint16_t &output) // Konvertiert ein mehrstellige
     }
   }
 }
-
-// // Methode zur Umwandlung des ADC-Werts in einen Dezimalwert
-// uint16_t mapADC(float x, float in_min, float in_max, uint16_t out_min, uint16_t out_max)
-// {
-//   // Standard-Arduino-Mapping-Funktion zur Umwandlung des ADC-Werts
-//   return static_cast<uint16_t>((x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min);
-// }

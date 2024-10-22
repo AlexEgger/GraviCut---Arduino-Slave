@@ -1,8 +1,8 @@
 #include "Schere.h"
 
 // Constructor
-Schere::Schere(int posPin, int negPin, int adcPin, int tol, const int positions[2])
-    : BasePosServo(posPin, negPin, adcPin, tol, positions) // Calling the base class constructor
+Schere::Schere(int posPin, int negPin, int adcPin, uint16_t tol, const int positions[2], uint16_t closedLoopTol, bool inverseMapping)
+    : BasePosServo(posPin, negPin, adcPin, tol, positions, closedLoopTol, inverseMapping) // Calling the base class constructor
 {
     // No additional initialization needed
 }
@@ -18,5 +18,5 @@ ModuleState Schere::parseInput(int inputValue)
     {
         return positionMinimum(_storedPositions[1]);
     }
-    return InvalidState; // Invalid input
+    return ErrorState; // Invalid input
 }

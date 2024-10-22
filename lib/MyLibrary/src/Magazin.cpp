@@ -62,5 +62,5 @@ ModuleState Magazin::parseInput(int inputValue)
     {
         return activateControl(motorIndex); // Rufe activateControl mit dem entsprechenden Index auf
     }
-    return InvalidState; // Ungültige Eingabe
+    return ErrorState; // Ungültige Eingabe
 }
