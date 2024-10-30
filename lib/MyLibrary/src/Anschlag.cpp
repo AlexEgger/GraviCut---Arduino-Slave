@@ -20,16 +20,12 @@ ModuleState Anschlag::parseInput(int inputValue)
     // Serial.print("Received input: ");
     // Serial.println(inputValue);
 
-    if (inputValue == 0) // Move to Position A
+    if (inputValue >= 200)
     {
-        return positionMaximum(_storedPositions[0]);
-    }
-    else if (inputValue == 1) // Move to Position B
-    {
-        return positionMinimum(_storedPositions[1]);
+        return positionTarget(inputValue); // Position to move to based on input
     }
     else
     {
-        return positionTarget(inputValue); // Position to move to based on input
+        return positionMinimum(_storedPositions[0]); // Move to position for no collision
     }
 }

@@ -4,7 +4,7 @@
 
 // Konstruktor der abgeleiteten Klasse BasePosServo
 BasePosServo::BasePosServo(int posPin, int negPin, int adcPin, uint16_t tol, uint16_t closedLoopTol, bool inverseMapping)
-    : _posPin(posPin), _negPin(negPin), _adcPin(adcPin), _position(0), _tol(tol), _closedLoopTol(closedLoopTol), _inverseMapping(inverseMapping), _currentDirection(Off)
+    : _posPin(posPin), _negPin(negPin), _adcPin(adcPin), _position(0), _tol(tol), _closedLoopTol(closedLoopTol), _inverseMapping(inverseMapping), _currentDirection(Off), _currentPositionIndex(-1)
 {
     // Initialisierung der Pins als Ein- und Ausgänge
     pinMode(_posPin, OUTPUT);
@@ -61,8 +61,8 @@ void BasePosServo::updatePosition()
 
     // Serial.print(F("ADC-Wert: "));
     // Serial.println(_adcValue);
-    Serial.print(F("Position: "));
-    Serial.println(_position);
+    // Serial.print(F("Position: "));
+    // Serial.println(_position);
 }
 
 // Methode zum Ansteuern der Ausgänge
@@ -93,6 +93,7 @@ void BasePosServo::goDirection(motorDirection direction)
             negState = LOW;
             break;
         }
+
         // Setzen der Pin-Zustände
         digitalWrite(_posPin, posState);
         digitalWrite(_negPin, negState);
@@ -121,8 +122,7 @@ ModuleState BasePosServo::positionTarget(int targetPosition)
 ModuleState BasePosServo::positionTargetWithTol(int targetPosition)
 {
     updatePosition(); // Position aktualisieren
-                      // Serial.print("Moving to position: ");
-    // Serial.println(targetPosition);
+
     if (_position < targetPosition - _tol)
     {
         goDirection(Positive);
@@ -139,7 +139,7 @@ ModuleState BasePosServo::positionTargetWithTol(int targetPosition)
     {
         goDirection(Off);
 
-        // Serial.println("Position reached");
+        Serial.println("Position reached");
 
         return CompletedState; // Operation completed
     }
@@ -149,6 +149,7 @@ ModuleState BasePosServo::positionTargetWithTol(int targetPosition)
 ModuleState BasePosServo::positionMinimum(int targetPosition)
 {
     updatePosition();
+
     if (_position < targetPosition) // Compare with the defined open position
     {
         goDirection(Positive);
@@ -165,6 +166,7 @@ ModuleState BasePosServo::positionMinimum(int targetPosition)
 ModuleState BasePosServo::positionMaximum(int targetPosition)
 {
     updatePosition();
+    
     if (_position > targetPosition) // Compare with the defined closed position
     {
         goDirection(Negative);
@@ -175,4 +177,10 @@ ModuleState BasePosServo::positionMaximum(int targetPosition)
         goDirection(Off);
         return CompletedState; // Operation completed
     }
+}
+
+// Ausgeben des Index der aktuellen Position
+int BasePosServo::getPositionIndex()
+{
+    return _currentPositionIndex;
 }

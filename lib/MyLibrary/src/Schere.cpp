@@ -10,13 +10,19 @@ Schere::Schere(int posPin, int negPin, int adcPin, uint16_t tol, const int posit
 // Overriding the parseInput method to control the actuator
 ModuleState Schere::parseInput(int inputValue)
 {
-    if (inputValue == 0) // Move to Position A
+    if (inputValue == 0) // Close
     {
-        return positionMaximum(_storedPositions[0]);
+        _currentPositionIndex = 0;
+        Serial.println(F("Closing Schere"));
+        
+        return positionMinimum(_storedPositions[0]);
     }
-    else if (inputValue == 1) // Move to Position B
+    else if (inputValue == 1) // Open
     {
-        return positionMinimum(_storedPositions[1]);
+        _currentPositionIndex = 1;
+        Serial.println(F("Opening Schere"));
+
+        return positionMaximum(_storedPositions[1]);
     }
     return ErrorState; // Invalid input
 }

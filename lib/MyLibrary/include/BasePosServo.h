@@ -20,6 +20,7 @@ protected:
     int _position;                    // Current position in 1/100 cm
     int _adcValue;                    // Current ADC value
     int _storedPositions[2];          // Fixed positions the motor should move to (optional)
+    int _currentPositionIndex;        // Index of the current position in _storedPositions
     bool _inverseMapping;             // Invert the mapping of the ADC value
     const uint16_t _tol;              // Tolerance in 1/100 cm
     const uint16_t _closedLoopTol;    // Tolerance for closed loop control
@@ -55,6 +56,9 @@ public:
 
     // Ausgeben der aktuellen Position
     int getPosition();
+
+    // Ausgeben des Index der aktuellen Position
+    int getPositionIndex();
 };
 
 #endif // BASEPOSSERVO_H

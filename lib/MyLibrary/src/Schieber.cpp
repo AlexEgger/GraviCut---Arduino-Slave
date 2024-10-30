@@ -12,10 +12,12 @@ ModuleState Schieber::parseInput(int inputValue)
 {
     if (inputValue == 0) // Move to Position A
     {
+        _currentPositionIndex = 0;
         return positionTarget(_storedPositions[0]);
     }
     else if (inputValue == 1) // Move to Position B
     {
+        _currentPositionIndex = 1;
         return positionTarget(_storedPositions[1]);
     }
     return ErrorState; // Invalid input
