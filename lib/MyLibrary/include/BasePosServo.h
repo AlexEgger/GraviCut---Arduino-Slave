@@ -47,9 +47,11 @@ protected:
     // Move actuator to at maximum targetPosition
     virtual ModuleState positionMaximum(int targetPosition);
 
+    void calibrateMinMaxPositions(); // Calibrate minimum and maximum positions based on mechanical constraints
+
 public:
     // Standard-Konstruktor
-    BasePosServo(int posPin, int negPin, int adcPin, uint16_t tol, uint16_t closedLoopTol = 0, bool inverseMapping = false);
+    BasePosServo(int posPin, int negPin, int adcPin, uint16_t tol, uint16_t closedLoopTol = 0, bool inverseMapping = false, bool calibrateMinMax = false);
 
     // Überladener Konstruktor mit zusätzlichem Positionsarray
     BasePosServo(int posPin, int negPin, int adcPin, uint16_t tol, const int positions[2], uint16_t closedLoopTol = 0, bool inverseMapping = false);

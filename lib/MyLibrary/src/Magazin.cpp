@@ -25,7 +25,7 @@ ModuleState Magazin::activateControl(int index)
         digitalWrite(_pairs[index].solenoidPin, HIGH); // Solenoid einschalten
         _timer = millis();                             // Timer zurücksetzen
         _isActivated = true;                           // Aktivierungsstatus setzen
-        return RunningState;                                      // Noch nicht fertig, Zeit läuft
+        return RunningState;                           // Noch nicht fertig, Zeit läuft
     }
 
     // Solenoid ist aktiviert, Zeit prüfen
@@ -46,9 +46,9 @@ ModuleState Magazin::activateControl(int index)
         // Wenn der Sensorwert erkannt wurde, Rückgabewert 2
         if (sensorValue == HIGH)
         {
-            return ErrorState; // Sensorwert erkannt
+            return CompletedState; // Sensorwert erkannt
         }
-        return CompletedState; // Vorgang abgeschlossen, aber Sensor nicht ausgelöst
+        return ErrorState; // Vorgang abgeschlossen, aber Sensor nicht ausgelöst
     }
 
     return RunningState; // Vorgang läuft noch

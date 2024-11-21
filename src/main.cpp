@@ -74,8 +74,8 @@ void setup()
   // Magazin Daten
   int solenoidPins[3] = {12, 11, 9}; // C-Array für Solenoid-Pins
   int sensorPins[3] = {13, 10, 8};   // C-Array für Sensor-Pins
-  int timeOn = 1000;                 // Aktivierungszeit für das Magazin
-  int timeOff = 1000;                // Deaktivierungszeit für das Magazin
+  int timeOn = 150;                  // Aktivierungszeit für das Magazin
+  int timeOff = 1350;                // Deaktivierungszeit für das Magazin
 
   modules[MagazinModule] = new Magazin(solenoidPins, sensorPins, timeOn, timeOff); // Magazin (Solenoid-Pins, Sensor-Pins, Aktivierungs- und Deaktivierungsdauer)
 
@@ -90,15 +90,15 @@ void setup()
   modules[SchieberModule] = new Schieber(posPin, negPin, adcPin, tol, positionenSchieber, closedLoopTol); // Schieber (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz, Position A, Position B)
 
   // Schere Daten
-  posPin = 7;                          // Positiver Pin für die Schere
-  negPin = 6;                          // Negativer Pin für die Schere
-  adcPin = 14;                         // ADC-Pin für die Schere
-  tol = 5;                             // Toleranz für die Schere
-  closedLoopTol = 0;                   // Toleranz in 1/100 cm ab der der Motor in einer Schleife regelt
-  int positionenSchere[2] = {500, 80}; // Positionen für Schere
-  bool inverseMapping = false;         // Invertiertes Mapping für den Anschlag
+  posPin = 7;                  // Positiver Pin für die Schere
+  negPin = 6;                  // Negativer Pin für die Schere
+  adcPin = 14;                 // ADC-Pin für die Schere
+  tol = 5;                     // Toleranz für die Schere
+  closedLoopTol = 0;           // Toleranz in 1/100 cm ab der der Motor in einer Schleife regelt
+  bool calibrateMinMax = true; // Kalibrierung der minimalen und maximalen Positionen
+  bool inverseMapping = false; // Invertiertes Mapping für den Anschlag
 
-  modules[SchereModule] = new Schere(posPin, negPin, adcPin, tol, positionenSchere, closedLoopTol, inverseMapping); // Schere (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz, Position für das Öffnen, Position für das Schließen)
+  modules[SchereModule] = new Schere(posPin, negPin, adcPin, tol, closedLoopTol, inverseMapping, calibrateMinMax); // Schere (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz, Position für das Öffnen, Position für das Schließen)
 
   // Anschlag Daten
   posPin = 2;                             // Positiver Pin für den Anschlag
@@ -112,8 +112,8 @@ void setup()
   modules[AnschlagModule] = new Anschlag(posPin, negPin, adcPin, tol, positionenAnschlag, closedLoopTol, inverseMapping); // Anschlag (Positiver Pin, Negativer Pin, ADC-Pin, Toleranz)
 
   // Wechsler Daten
-  int pwmPin = 3;                      // PWM-Pin für den Wechsler
-  float rotationTimePerDegree = 0.003; // Drehzeit pro Grad für den Wechsler
+  int pwmPin = 3;                       // PWM-Pin für den Wechsler
+  float rotationTimePerDegree = 0.0035; // Drehzeit pro Grad für den Wechsler
 
   modules[WechslerModule] = new Wechsler(pwmPin, rotationTimePerDegree); // Wechsler (PWM-Pin, Drehzeit pro Grad, PWM-Duty-Cycle)
 
@@ -167,23 +167,32 @@ void parseInput()
       Module currentModule = static_cast<Module>(readValue / i); // Aktueller Funktionsblock
       int16_t currentRequest = readValue % i;                    // Aktueller Funktionswert
 
-      Serial.print(F("Funktionsblock: "));
-      Serial.println(currentModule);
-      Serial.print(F("Wert: "));
-      Serial.println(currentRequest);
+      // Serial.println();
+      // Serial.print(F("Funktionsblock: "));
+      // Serial.println(moduleToString(currentModule));
+      // Serial.print(F("Wert: "));
+      // Serial.println(currentRequest);
 
-      if (requestValues[currentModule] != currentRequest || (currentModule != SchereModule && currentModule != SchieberModule && currentModule != AnschlagModule)) // Wenn der Wert nicht bereits gesetzt ist
+      if (requestValues[currentModule] != currentRequest || // Wenn der Wert nicht bereits gesetzt ist
+          (currentModule != SchereModule &&                 // Wenn der Funktionsblock nicht Schere oder Anschlag ist
+           currentModule != SchieberModule &&               // Wenn der Funktionsblock nicht Schieber oder Anschlag ist
+           currentModule != AnschlagModule))                // Wenn der Funktionsblock nicht Schieber oder Anschlag ist
       {
-        Serial.println(F("Wert wird gesetzt"));
+        // Serial.println(F("Wert wird gesetzt"));
 
         requestValues[currentModule] = currentRequest; // Wert für den Funktionsblock speichern
         moduleStates[currentModule] = RunningState;    // Status auf "Running" setzen
 
-        Serial.print(F("Wert: "));
-        Serial.println(requestValues[currentModule]);
-        Serial.print(F("Status: "));
-        Serial.println(moduleStates[currentModule]);
+        // Serial.print(F("Wert: "));
+        // Serial.println(requestValues[currentModule]);
+        // Serial.print(F("Status: "));
+        // Serial.println(moduleStateToString(moduleStates[currentModule]));
       }
+      else
+      {
+        // Serial.println(F("Wert bereits gesetzt"));
+      }
+      // Serial.println();
 
       // Serial.print(F("Index: "));
       // Serial.println(i);
@@ -200,7 +209,7 @@ void parseInput()
 void respondToMaster()
 {
   moduleStateArray2CharArray(moduleStates, NumberOfModules, msg); // Antwortwert in Char-Array konvertieren
-  Serial.println(msg);                                            // Antwort ausgeben
+  // Serial.println(msg);                                            // Antwort ausgeben
 
   Wire.write(msg, msgSize); // Antwort an den Master senden
   // Serial.println(F("Antwort gesendet")); // Meldung ausgeben
@@ -218,6 +227,7 @@ void getResponses()
   {
     if (moduleStates[responder] == RunningState) // Wenn der Vorgang noch nicht abgeschlossen ist
     {
+
       if (testI2C) // Wenn der Testmodus aktiviert ist
       {
         moduleStates[responder] = CompletedState; // Testantwort setzen
@@ -263,12 +273,19 @@ void checkAnschlagCollision(uint8_t responder)
       currentAnschlag->parseInput(1); // Anschlag auf kollisionsfreie Position fahren
     }
   }
-  else if (responder == AnschlagModule && requestValues[responder] <= collisionValue)
+  else if (responder == AnschlagModule)
   {
-    Schieber *currentSchieber = static_cast<Schieber *>(modules[SchieberModule]); // Schieber initialisieren
-    if (currentSchieber->getPositionIndex() == 1)                                 // Wenn der Schieber auf Auswerfposition ist
+    if (requestValues[responder] <= collisionValue)
     {
-      currentSchieber->parseInput(0); // Schieber auf Positionierpositon fahren
+      Schieber *currentSchieber = static_cast<Schieber *>(modules[SchieberModule]); // Schieber initialisieren
+      if (currentSchieber->getPositionIndex() == 1)                                 // Wenn der Schieber auf Auswerfposition ist
+      {
+        currentSchieber->parseInput(0); // Schieber auf Positionierpositon fahren
+      }
+      else
+      {
+        moduleStates[responder] = modules[responder]->parseInput(requestValues[responder]); // Funktion ausführen
+      }
     }
     else
     {

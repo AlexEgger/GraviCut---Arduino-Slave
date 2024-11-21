@@ -3,7 +3,7 @@
 #include "myEnums.h"
 
 // Konstruktor der abgeleiteten Klasse BasePosServo
-BasePosServo::BasePosServo(int posPin, int negPin, int adcPin, uint16_t tol, uint16_t closedLoopTol, bool inverseMapping)
+BasePosServo::BasePosServo(int posPin, int negPin, int adcPin, uint16_t tol, uint16_t closedLoopTol, bool inverseMapping, bool calibrateMinMax)
     : _posPin(posPin), _negPin(negPin), _adcPin(adcPin), _position(0), _tol(tol), _closedLoopTol(closedLoopTol), _inverseMapping(inverseMapping), _currentDirection(Off), _currentPositionIndex(-1)
 {
     // Initialisierung der Pins als Ein- und Ausgänge
@@ -16,6 +16,11 @@ BasePosServo::BasePosServo(int posPin, int negPin, int adcPin, uint16_t tol, uin
     digitalWrite(_negPin, LOW);
 
     updatePosition();
+
+    if (calibrateMinMax)
+    {
+        calibrateMinMaxPositions();
+    }
 }
 
 // Überladener Konstruktor der abgeleiteten Klasse BasePosServo
@@ -139,7 +144,7 @@ ModuleState BasePosServo::positionTargetWithTol(int targetPosition)
     {
         goDirection(Off);
 
-        Serial.println("Position reached");
+        // Serial.println("Position reached");
 
         return CompletedState; // Operation completed
     }
@@ -166,7 +171,7 @@ ModuleState BasePosServo::positionMinimum(int targetPosition)
 ModuleState BasePosServo::positionMaximum(int targetPosition)
 {
     updatePosition();
-    
+
     if (_position > targetPosition) // Compare with the defined closed position
     {
         goDirection(Negative);
@@ -183,4 +188,56 @@ ModuleState BasePosServo::positionMaximum(int targetPosition)
 int BasePosServo::getPositionIndex()
 {
     return _currentPositionIndex;
+}
+
+// Calibrate minimum and maximum positions based on mechanical constraints
+void BasePosServo::calibrateMinMaxPositions()
+{
+    unsigned long startTime;            // Start time for timeout control
+    const unsigned long timeout = 5000; // Maximum duration allowed for each calibration step
+    const int startDelay = 500;         // Time delay before closed loop starts (in each direction)
+    const int loopTime = 500;           // Waiting time in the loop before next measurement
+    const int stableThreshold = 1;      // Minimum position change threshold to detect mechanical stop
+
+    // Move to the mechanical minimum position
+    goDirection(Negative);
+    delay(startDelay);                // Allow the motor to start moving
+    startTime = millis();             // Initialize timer for the movement
+    int previousPosition = _position; // Track position changes to detect stalls
+
+    while (true)
+    {
+        updatePosition(); // Continuously monitor the motor position
+
+        // Stop if position change is below threshold or timeout is exceeded
+        if (abs(previousPosition - _position) < stableThreshold || millis() - startTime > timeout)
+        {
+            goDirection(Off);
+            _storedPositions[1] = _position; // Store the calibrated minimum position
+            break;
+        }
+        previousPosition = _position; // Update position tracking
+        delay(loopTime);              // Allow time for motor movement and position feedback
+    }
+
+    // Move to the mechanical maximum position
+    goDirection(Positive);
+    delay(startDelay);            // Allow the motor to start moving
+    startTime = millis();         // Reset timer for max position calibration
+    previousPosition = _position; // Reset position tracking for this phase
+
+    while (true)
+    {
+        updatePosition(); // Continuously monitor the motor position
+
+        // Stop if position change is below threshold or timeout is exceeded
+        if (abs(previousPosition - _position) < stableThreshold || millis() - startTime > timeout)
+        {
+            goDirection(Off);
+            _storedPositions[0] = _position; // Store the calibrated maximum position
+            break;
+        }
+        previousPosition = _position; // Update position tracking
+        delay(loopTime);              // Allow time for motor movement and position feedback
+    }
 }

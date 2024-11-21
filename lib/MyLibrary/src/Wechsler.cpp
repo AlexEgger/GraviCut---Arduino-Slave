@@ -101,16 +101,16 @@ ModuleState Wechsler::rotateDegrees(int degrees)
  */
 ModuleState Wechsler::rotateForDuration(unsigned long duration)
 {
-    Serial.println("Rotating the motor for a specified duration...");
+   // Serial.println("Rotating the motor for a specified duration...");
     // If the motor is not currently running, initiate rotation
     if (!_motorRunning)
     {
-        Serial.println("Starting motor rotation...");
+       // Serial.println("Starting motor rotation...");
         // Reset the elapsed time and mark the motor as running
         _elapsedTime = 0;
         _motorRunning = true;
 
-        Serial.println("Setting servo to ON position...");
+       // Serial.println("Setting servo to ON position...");
         // Start the motor by setting the servo to 180 (turn on)
         _servo.write(120);
 
@@ -124,11 +124,11 @@ ModuleState Wechsler::rotateForDuration(unsigned long duration)
     // If the motor is currently running, check the elapsed time
     if (_motorRunning)
     {
-        Serial.println("Checking elapsed time...");
+       // Serial.println("Checking elapsed time...");
         // Get the elapsed time in milliseconds
         _elapsedTime = millis() - _startTime;
 
-        Serial.println("Elapsed time: " + String(_elapsedTime));
+       // Serial.println("Elapsed time: " + String(_elapsedTime));
 
         // If the elapsed time has exceeded the target time
         if (_elapsedTime >= _targetTime)
